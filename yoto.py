@@ -16,101 +16,54 @@ def ler_grafo_dot(path):
 
     return G
 
-def get_fanin(G, node):
-    # Retorna a lista dos nós que têm arestas apontando para um nó especifico
-    return list(G.predecessors(node))
-
 def get_fanout(G, node):
-    #Retorna a lista dos nós em que um nó especifico aponta( sucessor)
     return list(G.successors(node))
 
+def get_fanin(G, node):
+    return list(G.predecessors(node))
+
 def yoto_traversal(G):
-    """
-    Implementa o algoritmo de travessia ZigZag (YOTO).
-    Alterna sentido de visita baseado em fanin/fanout >= 2.
-    Percorre todo o grafo, começando por todos os nós de saída e entrada.
-    """
     visited = set()
     path = []
     order = []
 
-    # Nós que são saídas (out_degree == 0) e entradas (in_degree == 0)
-    start_nodes = set(n for n in G.nodes if G.out_degree(n) == 0 or G.in_degree(n) == 0)
-    if not start_nodes:
-        start_nodes = set(G.nodes)
+    def traverse(node, direction):
+        visited.add(node)
+        order.append(node)
 
-    for start in start_nodes:
-        if start in visited:
-            continue
+        if direction == 'forward':
+            neighbors = get_fanout(G, node)
+        else:
+            neighbors = get_fanin(G, node)
 
-        # Inicializa direção: se nó é saída (sem sucessores) começa backward, senão forward
-        direction = 'backward' if G.out_degree(start) == 0 else 'forward'
-        stack = [(start, direction)]
+        # Decide direção futura com base no grau do nó atual
+        fanout = len(get_fanout(G, node))
+        fanin = len(get_fanin(G, node))
 
-        while stack:
-            current, direction = stack.pop()
-            if current in visited:
-                continue
+        if direction == 'forward' and fanout >= 2:
+            next_direction = 'backward'
+        elif direction == 'backward' and fanin >= 2:
+            next_direction = 'forward'
+        else:
+            next_direction = direction
 
-            visited.add(current)
-            order.append(current)
-
-            if direction == 'forward':
-                neighbors = get_fanout(G, current)
-            else:
-                neighbors = get_fanin(G, current)
-
-            for neighbor in neighbors:
-                if neighbor not in visited:
-                    # Armazena aresta no sentido do percurso
-                    if direction == 'forward':
-                        path.append((current, neighbor))
-                    else:
-                        path.append((neighbor, current))
-
-            # Verifica se deve inverter a direção
-            fanin = len(get_fanin(G, current))
-            fanout = len(get_fanout(G, current))
-            if (direction == 'backward' and fanin >= 2) or (direction == 'forward' and fanout >= 2):
-                direction = 'forward' if direction == 'backward' else 'backward'
-
-            # Empilha vizinhos não visitados com direção atual
-            for neighbor in neighbors:
-                if neighbor not in visited:
-                    stack.append((neighbor, direction))
-
-    # Depois de percorrer os start_nodes, garante que todos os nós foram visitados
-    # Percorre os nós restantes não visitados com direção padrão 'forward'
-    for node in G.nodes:
-        if node not in visited:
-            stack = [(node, 'forward')]
-            while stack:
-                current, direction = stack.pop()
-                if current in visited:
-                    continue
-                visited.add(current)
-                order.append(current)
-
+        for neighbor in neighbors:
+            if neighbor not in visited:
+                # Registra aresta real utilizada
                 if direction == 'forward':
-                    neighbors = get_fanout(G, current)
+                    path.append((node, neighbor))
                 else:
-                    neighbors = get_fanin(G, current)
+                    path.append((neighbor, node))
+                traverse(neighbor, next_direction)
 
-                for neighbor in neighbors:
-                    if neighbor not in visited:
-                        if direction == 'forward':
-                            path.append((current, neighbor))
-                        else:
-                            path.append((neighbor, current))
+    # Começa por nós com grau de entrada zero
+    start_nodes = [n for n in G.nodes if G.in_degree(n) == 0]
+    if not start_nodes:
+        start_nodes = list(G.nodes)
 
-                fanin = len(get_fanin(G, current))
-                fanout = len(get_fanout(G, current))
-                if (direction == 'backward' and fanin >= 2) or (direction == 'forward' and fanout >= 2):
-                    direction = 'forward' if direction == 'backward' else 'backward'
-
-                for neighbor in neighbors:
-                    if neighbor not in visited:
-                        stack.append((neighbor, direction))
+    for node in start_nodes:
+        if node not in visited:
+            traverse(node, 'forward')
 
     return path, order
 
