@@ -36,7 +36,6 @@ def yoto_traversal(G):
         else:
             neighbors = get_fanin(G, node)
 
-        # Decide direção futura com base no grau do nó atual
         fanout = len(get_fanout(G, node))
         fanin = len(get_fanin(G, node))
 
@@ -49,19 +48,23 @@ def yoto_traversal(G):
 
         for neighbor in neighbors:
             if neighbor not in visited:
-                # Registra aresta real utilizada
                 if direction == 'forward':
                     path.append((node, neighbor))
                 else:
                     path.append((neighbor, node))
                 traverse(neighbor, next_direction)
 
-    # Começa por nós com grau de entrada zero
+    # Primeira passada: nós com grau de entrada zero
     start_nodes = [n for n in G.nodes if G.in_degree(n) == 0]
     if not start_nodes:
         start_nodes = list(G.nodes)
 
     for node in start_nodes:
+        if node not in visited:
+            traverse(node, 'forward')
+
+    # Segunda passada: cobre componentes desconexos
+    for node in G.nodes:
         if node not in visited:
             traverse(node, 'forward')
 
