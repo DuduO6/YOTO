@@ -1,6 +1,5 @@
 import networkx as nx
 import pydot
-import sys
 
 def ler_grafo_dot(path):
     graphs = pydot.graph_from_dot_file(path)
@@ -16,70 +15,49 @@ def ler_grafo_dot(path):
 
     return G
 
-def get_fanout(G, node):
-    return list(G.successors(node))
+def zigzag_traversal_full(graph):
+    visited_nodes = []
+    visited_nodes_set = set()
+    visited_edges = set()
 
-def get_fanin(G, node):
-    return list(G.predecessors(node))
+    def dfs(node, going_down=True):
+        if node in visited_nodes_set:
+            return
+        visited_nodes.append(node)
+        visited_nodes_set.add(node)
 
-def yoto_traversal(G):
-    visited = set()
-    path = []
-    order = []
+        fanin = graph.in_degree(node)
+        fanout = graph.out_degree(node)
 
-    def traverse(node, direction):
-        visited.add(node)
-        order.append(node)
-
-        if direction == 'forward':
-            neighbors = get_fanout(G, node)
+        if going_down:
+            neighbors = list(graph.successors(node))
         else:
-            neighbors = get_fanin(G, node)
+            neighbors = list(graph.predecessors(node))
 
-        fanout = len(get_fanout(G, node))
-        fanin = len(get_fanin(G, node))
-
-        if direction == 'forward' and fanout >= 2:
-            next_direction = 'backward'
-        elif direction == 'backward' and fanin >= 2:
-            next_direction = 'forward'
-        else:
-            next_direction = direction
+        neighbors.sort()
 
         for neighbor in neighbors:
-            if neighbor not in visited:
-                if direction == 'forward':
-                    path.append((node, neighbor))
-                else:
-                    path.append((neighbor, node))
-                traverse(neighbor, next_direction)
+            edge = (node, neighbor) if going_down else (neighbor, node)
+            if edge not in visited_edges:
+                visited_edges.add(edge)
+                dfs(neighbor, going_down)
 
-    # Primeira passada: nós com grau de entrada zero
-    start_nodes = [n for n in G.nodes if G.in_degree(n) == 0]
-    if not start_nodes:
-        start_nodes = list(G.nodes)
+        # Inverte sentido após visitar vizinhos, se necessário
+        if fanin >= 2 or fanout >= 2:
+            going_down = not going_down
 
-    for node in start_nodes:
-        if node not in visited:
-            traverse(node, 'forward')
+    for node in graph.nodes():
+        if node not in visited_nodes_set:
+            dfs(node)
 
-    # Segunda passada: cobre componentes desconexos
-    for node in G.nodes:
-        if node not in visited:
-            traverse(node, 'forward')
+    return visited_edges, visited_nodes
 
-    return path, order
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Uso: python yoto.py arquivo.dot")
-        sys.exit(1)
-
-    arquivo_dot = sys.argv[1]
+    arquivo_dot = "exemplo.dot"  # Substitua pelo seu arquivo real
     G = ler_grafo_dot(arquivo_dot)
 
-    arestas, ordem = yoto_traversal(G)
-
+    arestas, ordem = zigzag_traversal_full(G)
     print("Ordem de nós visitados:")
     print(" -> ".join(ordem))
 
