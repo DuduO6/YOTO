@@ -1,34 +1,28 @@
-digraph G {
-    // Componente 1
-    A -> B;
-    A -> C;
-    B -> D;
-    C -> D;
-    D -> E;
-    E -> F;
-    F -> G;
+strict digraph {
+    add0 [opcode=add];
+    add1 [opcode=add];
+    add2 [opcode=add];
+    add3 [opcode=add];
+    add4 [opcode=add];
+    add5 [opcode=add];
+    add6 [opcode=add];
+    add7 [opcode=add];
+    add8 [opcode=add];
+    add9 [opcode=add];
+    add10 [opcode=add];
 
-    // Componente 2
-    H -> I;
-    H -> J;
-    I -> K;
-    J -> K;
-    K -> L;
-
-    // Componente 3
-    M -> N;
-    M -> O;
-    N -> P;
-    O -> P;
-    P -> Q;
-    Q -> R;
-    R -> S;
-
-    // Arestas extras para criar múltiplas saídas/fanin
-    B -> E;
-    C -> F;
-    I -> L;
-    J -> L;
-    N -> R;
-    O -> S;
+    add0 -> add1;
+    add0 -> add2;
+    add1 -> add3;
+    add2 -> add3;
+    add1 -> add4;
+    add4 -> add6;
+    add3 -> add6;
+    add4 -> add5;
+    add3 -> add7;
+    add5 -> add9;
+    add6 -> add9;
+    add6 -> add8;
+    add7 -> add8;
+    add10 -> add2;  
 }

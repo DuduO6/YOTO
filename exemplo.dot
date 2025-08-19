@@ -9,6 +9,7 @@ digraph G {
 
     B -> D;
     D -> F;
+    F -> B;
 
     // reconvergências (cruzamentos entre os ramos)
     E -> D;   // reconvergência 1

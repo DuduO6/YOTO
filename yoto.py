@@ -46,60 +46,66 @@ def escolher_no_inicial(G: nx.DiGraph, seed=None):
 
 def zigzag_yoto(graph_out, graph_in, start, seed=None):
     if seed is not None:
-        random.seed(seed)  # opcional: garante reprodutibilidade
+        random.seed(seed)
 
     visited_nodes = []
     visited_edges = []
+    edges_transferidos = []  # arestas com chance de transferir localidade
+    edges_perdidos = []      # arestas vistas quando ambos os nós já estavam visitados
+
     seen_nodes = set()
     seen_edges = set()
 
     def dfs(node, direction="out"):
-        # Visita o nó se ainda não visitado
         if node not in seen_nodes:
             seen_nodes.add(node)
             visited_nodes.append(node)
 
-        # Define vizinhos de acordo com a direção atual
         neighbors_out = graph_out.get(node, [])
-        neighbors_in = graph_in.get(node, [])
+        neighbors_in  = graph_in.get(node, [])
 
-        # Estratégia gulosa: prioriza vizinhos ainda não visitados
+        # candidatos ainda não percorridos
         candidates_out = [n for n in neighbors_out if (node, n) not in seen_edges]
-        candidates_in  = [n for n in neighbors_in if (n, node) not in seen_edges]
+        candidates_in  = [n for n in neighbors_in  if (n, node) not in seen_edges]
 
-        # Ordem aleatória se houver mais de uma opção
         random.shuffle(candidates_out)
         random.shuffle(candidates_in)
 
-        # Explora sucessores (out → in)
-        for neighbor in candidates_out:
-            edge = (node, neighbor)
-            if edge not in seen_edges:   # evita repetição
-                seen_edges.add(edge)
-                visited_edges.append(edge)
-                # Decide direção
-                new_dir = direction
-                if len(neighbors_out) >= 2 or len(neighbors_in) >= 2:
-                    new_dir = "in" if direction == "out" else "out"
-                dfs(neighbor, new_dir)
+        def follow(u, v, new_dir):
+            edge = (u, v)
+            if edge in seen_edges:
+                return
+            seen_edges.add(edge)
+            visited_edges.append(edge)
 
-        # Explora predecessores (in → out)
-        for neighbor in candidates_in:
-            edge = (neighbor, node)
-            if edge not in seen_edges:   # evita repetição
-                seen_edges.add(edge)
-                visited_edges.append(edge)
-                new_dir = direction
-                if len(neighbors_out) >= 2 or len(neighbors_in) >= 2:
-                    new_dir = "out" if direction == "in" else "in"
-                dfs(neighbor, new_dir)
+            # se pelo menos um extremo ainda não foi visitado, há transferência de localidade
+            if (u not in seen_nodes) or (v not in seen_nodes):
+                edges_transferidos.append(edge)
+            else:
+                edges_perdidos.append(edge)
 
-    # Garante que todos os nós sejam visitados
-    for node in graph_out.keys():
+            dfs(v, new_dir)
+
+        # Explora sucessores (out)
+        for nb in candidates_out:
+            new_dir = direction
+            if len(neighbors_out) >= 2 or len(neighbors_in) >= 2:
+                new_dir = "in" if direction == "out" else "out"
+            follow(node, nb, new_dir)
+
+        # Explora predecessores (in)
+        for nb in candidates_in:
+            new_dir = direction
+            if len(neighbors_out) >= 2 or len(neighbors_in) >= 2:
+                new_dir = "out" if direction == "in" else "in"
+            follow(nb, node, new_dir)
+
+    # cobre todos os componentes
+    for node in list(graph_out.keys()):
         if node not in seen_nodes:
             dfs(node, "out")
 
-    return visited_nodes, visited_edges
+    return visited_nodes, visited_edges, edges_perdidos
 
 def plotar_comparacao_numerada_nos(G, ordem, arestas_zigzag):
     pos = nx.spring_layout(G, seed=42)
@@ -142,7 +148,7 @@ if __name__ == "__main__":
     graph_out, graph_in = construir_vizinhanças(G)
     start = escolher_no_inicial(G)
 
-    ordem, arestas_zigzag = zigzag_yoto(graph_out, graph_in, start)
+    ordem, arestas_zigzag, edges_perdidos = zigzag_yoto(graph_out, graph_in, start)
 
     print("Nó inicial:", start)
     print("\nOrdem de nós visitados (primeira visita):")
@@ -152,5 +158,14 @@ if __name__ == "__main__":
     print("\nArestas percorridas (u -> v):")
     for src, dst in arestas_zigzag:
         print(f"{src} -> {dst}")
+
+
+    if len(edges_perdidos)>0:
+        print("\nArestas perdidas (visitadas quando ambos os nós já tinham sido visitados):")
+        for src, dst in edges_perdidos:
+            print(f"{src} -> {dst}")
+    else:
+        print("Nenhuma aresta foi perdida")
+
 
     plotar_comparacao_numerada_nos(G, ordem, arestas_zigzag)
