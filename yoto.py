@@ -105,13 +105,13 @@ def zigzag_yoto(graph_out, graph_in, start, seed=None):
         if node not in seen_nodes:
             dfs(node, "out")
 
-    return visited_nodes, visited_edges, edges_perdidos
+    return visited_nodes, visited_edges, edges_perdidos, edges_transferidos
 
 def plotar_comparacao_numerada_nos(G, ordem, arestas_zigzag):
     pos = nx.spring_layout(G, seed=42)
     todas_arestas = set(G.edges())
-    arestas_percorridas = set(arestas_zigzag)
-    arestas_nao_percorridas = list(todas_arestas - arestas_percorridas)
+    arestas_percorridas = list(edges_transferidos)
+    arestas_nao_percorridas = edges_perdidos
 
     plt.figure(figsize=(10, 7))
 
@@ -124,13 +124,13 @@ def plotar_comparacao_numerada_nos(G, ordem, arestas_zigzag):
     # Arestas não percorridas tracejadas
     nx.draw_networkx_edges(
         G, pos, edgelist=arestas_nao_percorridas, style="dashed",
-        edge_color="black", arrowsize=15, connectionstyle="arc3,rad=0.1"
+        edge_color="red", arrowsize=15, connectionstyle="arc3,rad=0.1"
     )
 
     # Arestas percorridas vermelho sólido
     nx.draw_networkx_edges(
-        G, pos, edgelist=arestas_zigzag,
-        edge_color="red", arrowsize=20, width=2, connectionstyle="arc3,rad=0.1"
+        G, pos, edgelist=arestas_percorridas,
+        edge_color="black", arrowsize=20, width=2, connectionstyle="arc3,rad=0.1"
     )
 
     # Numeração dos nós de acordo com a ordem de visita
@@ -142,13 +142,13 @@ def plotar_comparacao_numerada_nos(G, ordem, arestas_zigzag):
     plt.show()
 
 if __name__ == "__main__":
-    arquivo_dot = "exemplo.dot"  # Substitua pelo seu arquivo
+    arquivo_dot = "exemplo2.dot"  # Substitua pelo seu arquivo
     G = ler_grafo_dot(arquivo_dot)
 
     graph_out, graph_in = construir_vizinhanças(G)
     start = escolher_no_inicial(G)
 
-    ordem, arestas_zigzag, edges_perdidos = zigzag_yoto(graph_out, graph_in, start)
+    ordem, arestas_zigzag, edges_perdidos, edges_transferidos = zigzag_yoto(graph_out, graph_in, start)
 
     print("Nó inicial:", start)
     print("\nOrdem de nós visitados (primeira visita):")
