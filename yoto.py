@@ -44,7 +44,7 @@ def escolher_no_inicial(G: nx.DiGraph, seed=None):
         raise ValueError("Grafo vazio: não há nó inicial.")
 
 
-def zigzag_yoto(graph_out, graph_in, start, seed=None):
+def zigzag_yoto(graph_out, graph_in, start=None, seed=None):
     if seed is not None:
         random.seed(seed)
 
@@ -76,36 +76,44 @@ def zigzag_yoto(graph_out, graph_in, start, seed=None):
             if edge in seen_edges:
                 return
             seen_edges.add(edge)
-            visited_edges.append(edge)
 
-            # se pelo menos um extremo ainda não foi visitado, há transferência de localidade
-            if (u not in seen_nodes) or (v not in seen_nodes):
+            # avaliar ANTES de recursão, usando o estado atual de seen_nodes
+            if v not in seen_nodes:
+                visited_edges.append(edge)        # só armazena as transferidas
                 edges_transferidos.append(edge)
             else:
                 edges_perdidos.append(edge)
 
             dfs(v, new_dir)
 
+
         # Explora sucessores (out)
         for nb in candidates_out:
-            new_dir = direction
-            if len(neighbors_out) >= 2 or len(neighbors_in) >= 2:
-                new_dir = "in" if direction == "out" else "out"
+            if direction == "out" and len(neighbors_out) >= 2:
+                new_dir = "in"
+            else:
+                new_dir = direction
             follow(node, nb, new_dir)
 
         # Explora predecessores (in)
         for nb in candidates_in:
-            new_dir = direction
-            if len(neighbors_out) >= 2 or len(neighbors_in) >= 2:
-                new_dir = "out" if direction == "in" else "in"
+            if direction == "in" and len(neighbors_in) >= 2:
+                new_dir = "out"
+            else:
+                new_dir = direction
             follow(nb, node, new_dir)
 
-    # cobre todos os componentes
-    for node in list(graph_out.keys()):
+    # respeita start e cobre todos os componentes (considerando nós em in/out)
+    all_nodes = set(graph_out.keys()) | set(graph_in.keys())
+    if start is not None and start in all_nodes and start not in seen_nodes:
+        dfs(start, "out")
+
+    for node in list(all_nodes):
         if node not in seen_nodes:
             dfs(node, "out")
 
     return visited_nodes, visited_edges, edges_perdidos, edges_transferidos
+
 
 def plotar_comparacao_numerada_nos(G, ordem, arestas_zigzag):
     pos = nx.spring_layout(G, seed=42)
@@ -142,7 +150,7 @@ def plotar_comparacao_numerada_nos(G, ordem, arestas_zigzag):
     plt.show()
 
 if __name__ == "__main__":
-    arquivo_dot = "exemplo2.dot"  # Substitua pelo seu arquivo
+    arquivo_dot = "exemplo.dot"  # Substitua pelo seu arquivo
     G = ler_grafo_dot(arquivo_dot)
 
     graph_out, graph_in = construir_vizinhanças(G)

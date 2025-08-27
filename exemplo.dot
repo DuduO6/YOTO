@@ -1,17 +1,15 @@
 digraph G {
-    // duas fontes
-    A -> C;
-    A -> B;
+  C -> A;
+  G -> C;
 
-    // ramos paralelos
-    C -> E;
-    E -> H;
+  G -> E;
 
-    B -> D;
-    D -> F;
-    F -> B;
+  H -> E;
 
-    // reconvergências (cruzamentos entre os ramos)
-    E -> D;   // reconvergência 1
-    H -> F;   // reconvergência 2
+  E -> C;  
+  E -> D;  
+  H -> F;  
+  
+  D -> B;
+  F -> D;
 }
