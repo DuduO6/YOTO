@@ -33,9 +33,9 @@ def escolher_no_inicial(G: nx.DiGraph, seed=None):
 
     fontes = [n for n in G.nodes() if G.in_degree(n) == 0]
 
-    if fontes:  # prioridade: nós sem entradas
+    if fontes:  
         return random.choice(fontes)
-    elif len(G) > 0:  # fallback: qualquer nó (preferindo maior fanout)
+    elif len(G) > 0:  
         candidatos = list(G.nodes())
         max_out = max(G.out_degree(n) for n in candidatos)
         melhores = [n for n in candidatos if G.out_degree(n) == max_out]
@@ -44,75 +44,66 @@ def escolher_no_inicial(G: nx.DiGraph, seed=None):
         raise ValueError("Grafo vazio: não há nó inicial.")
 
 
-def zigzag_yoto(graph_out, graph_in, start=None, seed=None):
-    if seed is not None:
-        random.seed(seed)
-
+def zigzag_yoto(graph_out, graph_in, start=None):
     visited_nodes = []
     visited_edges = []
-    edges_transferidos = []  # arestas com chance de transferir localidade
-    edges_perdidos = []      # arestas vistas quando ambos os nós já estavam visitados
+    edges_transferidos = []   
+    edges_perdidos = []       
 
     seen_nodes = set()
-    seen_edges = set()
+    seen_edges = set()        
+
+    def add_edge_and_recurse(u, v, next_node, new_dir):
+        e = (u, v)
+        if e in seen_edges:
+            return
+        seen_edges.add(e)
+
+        if next_node not in seen_nodes:
+            visited_edges.append(e)
+            edges_transferidos.append(e)
+        else:
+            edges_perdidos.append(e)
+
+        dfs(next_node, new_dir)
 
     def dfs(node, direction="out"):
         if node not in seen_nodes:
             seen_nodes.add(node)
             visited_nodes.append(node)
 
-        neighbors_out = graph_out.get(node, [])
-        neighbors_in  = graph_in.get(node, [])
+        succ = sorted(graph_out.get(node, []))  
+        pred = sorted(graph_in.get(node, []))   
 
-        # candidatos ainda não percorridos
-        candidates_out = [n for n in neighbors_out if (node, n) not in seen_edges]
-        candidates_in  = [n for n in neighbors_in  if (n, node) not in seen_edges]
+        if direction == "out":
 
-        random.shuffle(candidates_out)
-        random.shuffle(candidates_in)
+            for p in pred:
+                if (p, node) not in seen_edges and p not in seen_nodes:
+                    add_edge_and_recurse(p, node, p, "in")
 
-        def follow(u, v, new_dir):
-            edge = (u, v)
-            if edge in seen_edges:
-                return
-            seen_edges.add(edge)
+            for s in succ:
+                if (node, s) not in seen_edges:
+                    add_edge_and_recurse(node, s, s, "out")
 
-            # avaliar ANTES de recursão, usando o estado atual de seen_nodes
-            if v not in seen_nodes:
-                visited_edges.append(edge)        # só armazena as transferidas
-                edges_transferidos.append(edge)
-            else:
-                edges_perdidos.append(edge)
+        else:  # direction == "in"
+            for s in succ:
+                if (node, s) not in seen_edges and s not in seen_nodes:
+                    add_edge_and_recurse(node, s, s, "out")
 
-            dfs(v, new_dir)
+            for p in pred:
+                if (p, node) not in seen_edges:
+                    add_edge_and_recurse(p, node, p, "in")
 
-
-        # Explora sucessores (out)
-        for nb in candidates_out:
-            if direction == "out" and len(neighbors_out) >= 2:
-                new_dir = "in"
-            else:
-                new_dir = direction
-            follow(node, nb, new_dir)
-
-        # Explora predecessores (in)
-        for nb in candidates_in:
-            if direction == "in" and len(neighbors_in) >= 2:
-                new_dir = "out"
-            else:
-                new_dir = direction
-            follow(nb, node, new_dir)
-
-    # respeita start e cobre todos os componentes (considerando nós em in/out)
     all_nodes = set(graph_out.keys()) | set(graph_in.keys())
     if start is not None and start in all_nodes and start not in seen_nodes:
         dfs(start, "out")
 
-    for node in list(all_nodes):
-        if node not in seen_nodes:
-            dfs(node, "out")
+    for n in sorted(all_nodes):
+        if n not in seen_nodes:
+            dfs(n, "out")
 
     return visited_nodes, visited_edges, edges_perdidos, edges_transferidos
+
 
 
 def plotar_comparacao_numerada_nos(G, ordem, arestas_zigzag):
@@ -123,25 +114,20 @@ def plotar_comparacao_numerada_nos(G, ordem, arestas_zigzag):
 
     plt.figure(figsize=(10, 7))
 
-    # Nós não visitados cinza
     nos_nao_visitados = [n for n in G.nodes() if n not in ordem]
     nx.draw_networkx_nodes(G, pos, node_size=700, node_color="lightgray", nodelist=nos_nao_visitados)
-    # Nós visitados azul
     nx.draw_networkx_nodes(G, pos, nodelist=ordem, node_color="skyblue", node_size=700)
 
-    # Arestas não percorridas tracejadas
     nx.draw_networkx_edges(
         G, pos, edgelist=arestas_nao_percorridas, style="dashed",
         edge_color="red", arrowsize=15, connectionstyle="arc3,rad=0.1"
     )
 
-    # Arestas percorridas vermelho sólido
     nx.draw_networkx_edges(
         G, pos, edgelist=arestas_percorridas,
         edge_color="black", arrowsize=20, width=2, connectionstyle="arc3,rad=0.1"
     )
 
-    # Numeração dos nós de acordo com a ordem de visita
     node_labels = {node: str(i+1) for i, node in enumerate(ordem)}
     nx.draw_networkx_labels(G, pos, labels=node_labels, font_size=12, font_weight="bold")
 
@@ -150,7 +136,7 @@ def plotar_comparacao_numerada_nos(G, ordem, arestas_zigzag):
     plt.show()
 
 if __name__ == "__main__":
-    arquivo_dot = "exemplo.dot"  # Substitua pelo seu arquivo
+    arquivo_dot = "exemplo2.dot"  
     G = ler_grafo_dot(arquivo_dot)
 
     graph_out, graph_in = construir_vizinhanças(G)
